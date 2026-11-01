@@ -50,9 +50,7 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- Bühne: Handy füllt alles, größere Geräte zeigen ein Handy ---------- */
 
-#stage { position: fixed; inset: 0; height: 100dvh; }
-@media (display-mode: standalone) { #stage { height: 100lvh; } }
-#device, #screen { position: absolute; inset: 0; }
+#stage, #device, #screen { position: absolute; inset: 0; }
 #screen { overflow: hidden; background: #fff; isolation: isolate; }
 #island { display: none; }
 #app { position: absolute; inset: 0; z-index: 1; }
