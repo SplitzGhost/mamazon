@@ -1,5 +1,5 @@
 import { api, clearSession, saveSession, session } from './api.js';
-import { coin, icon } from './art.js';
+import { coin, icon, mumi } from './art.js';
 import { COIN } from './config.js';
 import { rolesView, signIn } from './login.js';
 import * as mama from './mama.js';
@@ -8,6 +8,7 @@ import { viewerView } from './viewer.js';
 import { ledgerList } from './orders.js';
 import { disablePush, enablePush, isIOS, isInstalled, pushStatus, registerWorker, syncPush } from './push.js';
 import { askCode } from './code.js';
+import { forgetTour, playTour, stopTour, tourDue } from './tour.js';
 import { countTo, dialog, esc, formatTime, sheet, toast } from './ui.js';
 
 const POLL_MS = 10000;
@@ -51,10 +52,14 @@ function accountView() {
     ? `<div class="card wallet"><div><small>Dein Guthaben</small><strong>${coin(30)} ${state.balance}</strong></div><span class="quiet">${COIN}</span></div>`
     : '';
   const codeHint = session.role === 'mama' ? 'Wird statt der Frage abgefragt' : 'Wird beim Anmelden abgefragt';
+  const tourRow = session.role === 'mama'
+    ? `<button class="list-row" data-act="tour"><span class="row-icon">${mumi(24)}</span><span class="list-text"><strong>Anleitung ansehen</strong><time>Mumi erklärt dir alles noch mal</time></span>${icon('chevron', 16)}</button>`
+    : '';
   return `<div class="large-title"><h1>Konto</h1></div>
     ${wallet}
     <div class="card list settings">
       <div id="push-row"></div>
+      ${tourRow}
       <button class="list-row" data-act="code"><span class="row-icon">${icon('lock', 19)}</span><span class="list-text"><strong>${state.hasCode ? 'Code ändern' : 'Code festlegen'}</strong><time>${codeHint}</time></span>${icon('chevron', 16)}</button>
       ${state.hasCode ? `<button class="list-row" data-act="removecode"><span class="row-icon">${icon('unlock', 19)}</span><span class="list-text"><strong>Code entfernen</strong></span>${icon('chevron', 16)}</button>` : ''}
       <button class="list-row" data-act="switch"><span class="row-icon">${icon('swap', 19)}</span><span class="list-text"><strong>Rolle wechseln</strong></span>${icon('chevron', 16)}</button>
@@ -160,18 +165,38 @@ async function poll() {
   timer = setTimeout(poll, POLL_MS);
 }
 
-async function showNotices() {
-  if (showingNotices || !state.notices?.length) return;
+// Die Anleitung kommt nach den Coin-Fenstern. Auf dem iPhone wartet sie auf die installierte App, die hat einen eigenen Speicher.
+async function showNotices(replayTour = false) {
+  if (showingNotices) return;
   showingNotices = true;
-  for (const entry of state.notices) {
+  for (const entry of state.notices ?? []) {
     if (seenNotices.has(entry.id)) continue;
     seenNotices.add(entry.id);
+    if (entry.kind === 'welcome') forgetTour();
     await mama.showNotice(entry);
     finishedNotices.add(entry.id);
     setTimeout(updateBalance, 700);
     await api('/api/ack', { ids: [entry.id] }).catch(() => {});
   }
+  const firstTime = session.role === 'mama' && tourDue() && !(isIOS && !isInstalled);
+  if (replayTour || firstTime) await runTour();
   showingNotices = false;
+}
+
+function openTab(next) {
+  tab = next;
+  render(true);
+}
+
+function runTour() {
+  mama.searchChanged('');
+  if (tab === 'shop') render();
+  else openTab('shop');
+  return playTour({
+    services: state.services,
+    openTab,
+    turnOnPush: () => actions.push().catch((error) => toast(error.message, 'bad')),
+  });
 }
 
 /* ---------- Anmeldung ---------- */
@@ -199,6 +224,7 @@ async function enter(animate = true) {
 
 function start() {
   clearTimeout(timer);
+  stopTour();
   state = null;
   app.innerHTML = rolesView();
 }
@@ -244,8 +270,7 @@ const actions = {
       document.getElementById('scroll').scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
-    tab = next;
-    render(true);
+    openTab(next);
   },
   product: ({ id }) => mama.openProduct(id, state, refresh),
   offer: () => mama.openOffer(refresh),
@@ -255,6 +280,7 @@ const actions = {
   advance: ({ id, status }) => arne.advanceOrder(id, status, refresh),
   give: () => arne.openGive(state, refresh),
   install: () => installHelp(),
+  tour: () => showNotices(true),
   async push() {
     const ok = await enablePush(state.vapidKey);
     toast(ok ? 'Nachrichten sind aktiv.' : 'Nachrichten wurden nicht erlaubt.', ok ? '' : 'bad');

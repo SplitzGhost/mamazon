@@ -89,6 +89,16 @@ export function coin(size = 16) {
   </svg>`;
 }
 
+// Mumi ist die Münze, die Mama durch die Anleitung führt.
+export function mumi(size = 56) {
+  return `<svg class="mumi" width="${size}" height="${size}" viewBox="0 0 64 64" aria-hidden="true">
+    <circle cx="32" cy="32" r="30" fill="url(#gCoin)"/>
+    <circle cx="32" cy="32" r="24" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="2"/>
+    <g class="mumi-eyes" fill="#fff"><ellipse cx="23.5" cy="27" rx="3.6" ry="4.8"/><ellipse cx="40.5" cy="27" rx="3.6" ry="4.8"/></g>
+    <path d="M22 37.500c3 6.500 17 6.500 20 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+
 const LINE = 'fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"';
 
 const paths = {
