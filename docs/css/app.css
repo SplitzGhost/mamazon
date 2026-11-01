@@ -298,6 +298,10 @@ h1, h2, h3, p { margin: 0; }
 .art-day { background: linear-gradient(150deg, #ffe0ec, #ffb6d0); }
 .art-massage { background: linear-gradient(150deg, #fff5f9, #ffdeea); }
 .art-bathroom { background: linear-gradient(150deg, #ffeef5, #ffcfe0); }
+.art-shopping { background: linear-gradient(150deg, #ffe0ec, #ffb6d0); }
+.art-laundry { background: linear-gradient(150deg, #fff0f6, #ffd0e1); }
+.art-dinner { background: linear-gradient(150deg, #ffb3cf, #f9709f); }
+.art-breakfast { background: linear-gradient(150deg, #ffe6ef, #ffbdd4); }
 
 .product-text { display: flex; flex-direction: column; flex: 1; gap: 3px; padding: 9px 6px 5px; }
 .product-text strong { font-size: 15px; line-height: 1.22; font-weight: 650; }
