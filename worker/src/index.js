@@ -387,6 +387,11 @@ async function route(request, env, ctx) {
     return send();
   }
   if (pathname === '/api/push/unsubscribe') { await unsubscribe(body, env); return send(); }
+  if (pathname === '/api/push/test') {
+    if (role === 'viewer') throw new Fail(403, 'Zuschauer bekommen keine Nachrichten.');
+    notify(env, ctx, role, 'MamaZon', 'Test: Nachrichten funktionieren.');
+    return send();
+  }
 
   if (orderAction) {
     const [, id, action] = orderAction;

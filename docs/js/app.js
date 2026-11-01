@@ -69,7 +69,7 @@ async function drawPushRow() {
     unsupported: ['Nachrichten', 'Dieses Gerät kann das leider nicht', ''],
     denied: ['Nachrichten sind blockiert', 'Bitte in den iPhone-Einstellungen erlauben', ''],
     off: ['Nachrichten aktivieren', 'Sofort Bescheid bekommen', 'push'],
-    on: ['Nachrichten sind aktiv', 'Dieses Gerät bekommt Bescheid', ''],
+    on: ['Nachrichten sind aktiv', 'Tippen für eine Testnachricht', 'testpush'],
   }[status];
   const [title, text, act] = texts;
   row.innerHTML = `<button class="list-row" ${act ? `data-act="${act}"` : 'disabled'}>
@@ -234,6 +234,10 @@ const actions = {
     const ok = await enablePush(state.vapidKey);
     toast(ok ? 'Nachrichten sind aktiv.' : 'Nachrichten wurden nicht erlaubt.', ok ? '' : 'bad');
     drawPushRow();
+  },
+  async testpush() {
+    await api('/api/push/test', {});
+    toast('Testnachricht ist unterwegs.');
   },
   async switch() {
     const sure = await dialog({
