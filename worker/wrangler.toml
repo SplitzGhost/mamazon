@@ -9,4 +9,4 @@ VAPID_SUBJECT = "https://splitzghost.github.io/mamazon/"
 [[d1_databases]]
 binding = "DB"
 database_name = "mamazon"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "6748ea20-a0fb-4bfb-a054-05d36181a4ae"
