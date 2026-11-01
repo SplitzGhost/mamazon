@@ -12,12 +12,13 @@ self.addEventListener('activate', (event) => {
 });
 
 // Immer zuerst das Netz, damit neue Versionen sofort ankommen. Der Speicher hilft nur ohne Empfang.
+// „no-cache“ fragt auch am Browser-Speicher vorbei nach, GitHub Pages erlaubt dort sonst 10 Minuten alte Dateien.
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== 'GET' || url.origin !== location.origin) return;
   event.respondWith((async () => {
     try {
-      const response = await fetch(event.request);
+      const response = await fetch(event.request, { cache: 'no-cache' });
       if (response.ok) {
         const cache = await caches.open(CACHE);
         await cache.put(event.request, response.clone());
