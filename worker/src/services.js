@@ -1,0 +1,48 @@
+// Der Server ist die einzige Quelle für Preise, damit niemand sie im Browser ändern kann.
+export const SERVICES = [
+  {
+    id: 'dishwasher',
+    title: 'Geschirrspüler ein- und ausräumen',
+    short: 'Rein, an, raus, einsortiert.',
+    description: 'Ich räume den Geschirrspüler komplett ein, schalte ihn an und sortiere danach alles wieder in die Schränke.',
+    price: 20,
+    tagline: 'Bestseller in Küche & Haushalt',
+    also: 'Massage',
+  },
+  {
+    id: 'massage',
+    title: 'Massage',
+    short: 'Nacken, Schultern, Rücken.',
+    description: 'Eine entspannte Massage für Nacken, Schultern und Rücken. Du legst dich hin, ich kümmere mich um den Rest.',
+    price: 40,
+    tagline: 'Nur noch 1 Sohn auf Lager',
+    also: 'Bad putzen',
+  },
+  {
+    id: 'bathroom',
+    title: 'Bad putzen',
+    short: 'Einmal komplett glänzend.',
+    description: 'Waschbecken, Dusche, Badewanne, Toilette, Spiegel und Boden. Wenn ich fertig bin, glänzt das ganze Bad.',
+    price: 60,
+    tagline: 'Lieferung durch Sohn-Prime',
+    also: 'Geschirrspüler ein- und ausräumen',
+  },
+  {
+    id: 'evening',
+    title: 'Ein Abend kinderfrei',
+    short: 'Ich übernehme die Kinder.',
+    description: 'Ich übernehme einen Abend lang die Kinder. Du hast frei und kannst machen, was du willst.',
+    price: 150,
+    tagline: 'Kunden kauften auch: Ruhe',
+    also: 'Ein Tag kinderfrei',
+  },
+  {
+    id: 'day',
+    title: 'Ein Tag kinderfrei',
+    short: 'Ein ganzer Tag nur für dich.',
+    description: 'Ich übernehme einen ganzen Tag lang die Kinder. Der Tag gehört dir, mach damit, was du willst.',
+    price: 300,
+    tagline: 'Premium-Produkt, sehr begrenzt',
+    also: 'Massage',
+  },
+];

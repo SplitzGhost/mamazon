@@ -1,0 +1,12 @@
+name = "mamazon-api"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://splitzghost.github.io,http://localhost:8080"
+VAPID_SUBJECT = "https://splitzghost.github.io/mamazon/"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "mamazon"
+database_id = "00000000-0000-0000-0000-000000000000"
