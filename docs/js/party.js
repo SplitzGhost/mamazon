@@ -225,7 +225,16 @@ const fanfare = () => playNotes([[523, 0, 0.3], [659, 0.13, 0.3], [784, 0.26, 0.
 
 /* ---------- Bühne ---------- */
 
+// Statusleiste und alles rund um die App bekommen dieselbe Farbe, damit die Show randlos wirkt.
+function tintWindow(color) {
+  if (matchMedia('(min-width: 700px) and (min-height: 600px)').matches) return;
+  document.querySelector('meta[name="theme-color"]').content = color ?? '#ffffff';
+  document.documentElement.style.background = color ?? '';
+  document.body.style.background = color ?? '';
+}
+
 function stageFor(className, html) {
+  tintWindow(className === 'birthday' ? '#3f0726' : '#d4145e');
   const root = document.createElement('div');
   root.className = `party ${className}`;
   root.setAttribute('role', 'alertdialog');
@@ -258,6 +267,7 @@ async function finish(root, sky, button, sound) {
   await wait(420);
   sky.stop();
   root.remove();
+  tintWindow(null);
 }
 
 /* ---------- Coins sind da ---------- */

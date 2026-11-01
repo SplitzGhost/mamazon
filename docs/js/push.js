@@ -46,6 +46,13 @@ export async function enablePush(vapidKey) {
   return true;
 }
 
+// Der Server kann ein Gerät nach Reset oder neuem Code vergessen haben, darum meldet es sich beim Start wieder an.
+export async function syncPush() {
+  if (await pushStatus() !== 'on') return;
+  const subscription = await currentSubscription();
+  await api('/api/push/subscribe', { subscription: subscription.toJSON() });
+}
+
 export async function disablePush() {
   if (!supported()) return;
   const subscription = await currentSubscription();

@@ -1,6 +1,7 @@
 import { api, saveSession } from './api.js';
 import { icon, coin } from './art.js';
 import { dialog, toast } from './ui.js';
+import { askCode } from './code.js';
 import { timePicker } from './wheel.js';
 
 export function rolesView() {
@@ -40,13 +41,17 @@ function askMama() {
   });
 }
 
-// Liefert die neue Rolle oder null, wenn die Anmeldung nicht geklappt hat. Nur Mama bekommt eine Frage.
+// Liefert die neue Rolle oder null, wenn die Anmeldung nicht geklappt hat.
+// Ein eigener Code ersetzt die Frage. Ohne Code hat nur Mama eine Frage.
 export async function signIn(role) {
-  const answer = role === 'mama' ? await askMama() : '';
-  if (answer === null) return null;
-
   let result;
   try {
+    const codes = await api('/api/auth');
+    const name = role === 'mama' ? 'Mama' : 'Arne';
+    let answer = '';
+    if (codes[role]) answer = await askCode({ title: `Hallo ${name}`, text: 'Gib deinen Code ein.' });
+    else if (role === 'mama') answer = await askMama();
+    if (answer === null) return null;
     result = await api('/api/login', { role, answer });
   } catch (error) {
     toast(error.message, 'bad');

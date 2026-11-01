@@ -50,7 +50,9 @@ h1, h2, h3, p { margin: 0; }
 
 /* ---------- Bühne: Handy füllt alles, größere Geräte zeigen ein Handy ---------- */
 
-#stage, #device, #screen { position: absolute; inset: 0; }
+#stage { position: fixed; inset: 0; height: 100dvh; }
+@media (display-mode: standalone) { #stage { height: 100lvh; } }
+#device, #screen { position: absolute; inset: 0; }
 #screen { overflow: hidden; background: #fff; isolation: isolate; }
 #island { display: none; }
 #app { position: absolute; inset: 0; z-index: 1; }
@@ -375,6 +377,7 @@ button.list-row:not(:disabled):active { background: var(--pink-mist); }
 .list-text strong { display: block; font-size: 15px; font-weight: 550; overflow-wrap: anywhere; }
 .list-text time { display: block; font-size: 12.500px; color: var(--ink-2); }
 .row-icon { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 10px; background: var(--pink-soft); color: var(--pink); }
+.list-row.danger .list-text strong { color: var(--pink-deep); }
 .amount { font-weight: 700; color: var(--ink-2); font-variant-numeric: tabular-nums; }
 .amount.plus { color: var(--pink); }
 
@@ -530,6 +533,41 @@ button.list-row:not(:disabled):active { background: var(--pink-mist); }
   backface-visibility: hidden;
 }
 .wheel-item.active { color: var(--ink); font-weight: 600; }
+
+/* ---------- Code-Eingabe ---------- */
+
+.code-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 12px) 24px calc(var(--safe-bottom) + 12px);
+  text-align: center;
+  background: rgba(255, 255, 255, .72);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(30px) saturate(180%);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity .25s, transform .42s var(--ease);
+}
+.code-wrap.shown { opacity: 1; transform: none; }
+.code-wrap.leaving { opacity: 0; transform: translateY(16px); }
+.code-wrap h2 { font-size: 22px; font-weight: 750; letter-spacing: -.3px; }
+.code-wrap p { margin-top: 5px; font-size: 15px; color: var(--ink-2); }
+
+.code-dots { display: flex; gap: 18px; margin: 26px 0 30px; }
+.code-dots.wrong { animation: shake .42s ease-in-out; }
+.code-dots i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--pink); transition: background .15s, transform .35s var(--spring); }
+.code-dots i.on { background: var(--pink); transform: scale(1.18); }
+
+.keypad { display: grid; grid-template-columns: repeat(3, 76px); gap: 14px 22px; }
+.key { width: 76px; height: 76px; border-radius: 50%; font-size: 30px; font-weight: 400; transition: transform .28s var(--spring), background .15s; }
+.key:active { transform: scale(.9); background: var(--pink-soft); }
+.key.plain { background: none; box-shadow: none; font-size: 16px; font-weight: 600; color: var(--pink-deep); -webkit-backdrop-filter: none; backdrop-filter: none; }
+.key.empty { visibility: hidden; }
 
 /* ---------- Kleine Effekte ---------- */
 

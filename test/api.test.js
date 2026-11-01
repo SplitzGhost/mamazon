@@ -143,9 +143,53 @@ test('kompletter Ablauf', { skip: !reachable && 'lokaler Server läuft nicht' },
     assert.equal(res.status, 403);
   });
 
+  let arneToken = arne;
+  await t.test('Code ersetzt die Frage und meldet andere Geräte ab', async () => {
+    assert.deepEqual((await call('/api/auth')).data, { mama: false, arne: false });
+    assert.equal((await call('/api/code', { body: { code: '1234' } })).status, 403, 'Zuschauer dürfen das nicht');
+    assert.equal((await call('/api/code', { token: mama, body: { code: '12' } })).status, 400);
+
+    const set = await call('/api/code', { token: mama, body: { code: '4711' } });
+    assert.equal(set.status, 200);
+    assert.equal((await call('/api/state', { token: mama })).data.role, 'viewer', 'das alte Token gilt nicht mehr');
+    assert.equal((await stateOf(set.data.token)).role, 'mama');
+    assert.equal((await stateOf(set.data.token)).hasCode, true);
+    assert.equal((await login('mama', read('MAMA_ANSWER'))).ok, false, 'die Frage gilt nicht mehr');
+    assert.equal((await login('mama', '0000')).ok, false);
+    assert.ok((await login('mama', '4711')).token);
+
+    const arneSet = await call('/api/code', { token: arne, body: { code: '1892' } });
+    arneToken = arneSet.data.token;
+    assert.equal((await call('/api/auth')).data.arne, true);
+    assert.equal((await login('arne')).ok, false, 'Arne braucht jetzt den Code');
+    assert.ok((await login('arne', '1892')).token);
+  });
+
+  await t.test('Code entfernen bringt die Frage zurück', async () => {
+    const mamaToken = (await login('mama', '4711')).token;
+    await call('/api/code', { token: mamaToken, body: { code: null } });
+    assert.ok((await login('mama', read('MAMA_ANSWER'))).token);
+  });
+
   await t.test('nach fünf Fehlversuchen ist Pause', async () => {
     for (let i = 0; i < 5; i += 1) await login('mama', '00:00');
     const res = await call('/api/login', { body: { role: 'mama', answer: read('MAMA_ANSWER') } });
     assert.equal(res.status, 429);
+  });
+
+  await t.test('Reset macht die App wie neu', async () => {
+    assert.equal((await call('/api/reset', { body: {} })).status, 403, 'Zuschauer dürfen das nicht');
+    assert.equal((await call('/api/reset', { token: arneToken, body: {} })).status, 200);
+
+    const viewer = (await call('/api/state')).data;
+    assert.equal(viewer.balance, 0);
+    assert.equal(viewer.orders.length, 0);
+    assert.equal((await call('/api/state', { token: arneToken })).data.role, 'viewer', 'alle müssen sich neu anmelden');
+    assert.deepEqual((await call('/api/auth')).data, { mama: false, arne: false });
+
+    const fresh = (await login('mama', read('MAMA_ANSWER'))).token;
+    const s = await stateOf(fresh);
+    assert.equal(s.balance, 100, 'die Begrüßung gibt es wieder');
+    assert.equal(s.notices[0].kind, 'welcome');
   });
 });

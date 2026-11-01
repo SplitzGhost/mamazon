@@ -25,8 +25,27 @@ async function hmacKey(env) {
   return crypto.subtle.importKey('raw', enc.encode(env.TOKEN_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
 }
 
+async function readMeta(key, env) {
+  const row = await env.DB.prepare('SELECT value FROM meta WHERE key = ?').bind(key).first();
+  return row?.value ?? null;
+}
+
+function writeMeta(key, value, env) {
+  return env.DB.prepare('INSERT INTO meta (key, value) VALUES (?1, ?2) ON CONFLICT(key) DO UPDATE SET value = ?2').bind(key, String(value));
+}
+
+// Steigt der Zähler einer Rolle, gelten alle bisherigen Anmeldungen dieser Rolle nicht mehr.
+async function epoch(role, env) {
+  return Number(await readMeta(`epoch_${role}`, env) ?? 0);
+}
+
+async function hashCode(role, code, env) {
+  const sig = await crypto.subtle.sign('HMAC', await hmacKey(env), enc.encode(`code:${role}:${code}`));
+  return b64u(new Uint8Array(sig));
+}
+
 async function makeToken(role, env) {
-  const payload = b64u(enc.encode(JSON.stringify({ role, exp: now() + TOKEN_LIFETIME })));
+  const payload = b64u(enc.encode(JSON.stringify({ role, exp: now() + TOKEN_LIFETIME, epoch: await epoch(role, env) })));
   const sig = await crypto.subtle.sign('HMAC', await hmacKey(env), enc.encode(payload));
   return `${payload}.${b64u(new Uint8Array(sig))}`;
 }
@@ -38,8 +57,9 @@ async function readRole(request, env) {
   try {
     const ok = await crypto.subtle.verify('HMAC', await hmacKey(env), fromB64u(sig), enc.encode(payload));
     if (!ok) return 'viewer';
-    const { role, exp } = JSON.parse(new TextDecoder().decode(fromB64u(payload)));
-    return exp > now() ? role : 'viewer';
+    const token = JSON.parse(new TextDecoder().decode(fromB64u(payload)));
+    const valid = token.exp > now() && (token.epoch ?? 0) === await epoch(token.role, env);
+    return valid ? token.role : 'viewer';
   } catch {
     return 'viewer';
   }
@@ -51,15 +71,17 @@ function need(role, wanted) {
 
 async function login(request, env) {
   const { role, answer } = await request.json();
-  if (role === 'arne') return json({ ok: true, role, token: await makeToken(role, env) }, request, env);
-  if (role !== 'mama') throw new Fail(400, 'Unbekannte Rolle.');
-  const expected = env.MAMA_ANSWER;
+  if (role !== 'mama' && role !== 'arne') throw new Fail(400, 'Unbekannte Rolle.');
+
+  const code = await readMeta(`code_${role}`, env);
+  if (role === 'arne' && !code) return json({ ok: true, role, token: await makeToken(role, env) }, request, env);
 
   const key = `${role}:${request.headers.get('CF-Connecting-IP') ?? 'local'}`;
   const row = await env.DB.prepare('SELECT fails, locked_until FROM login_attempts WHERE key = ?').bind(key).first();
   if (row && row.locked_until > now()) throw new Fail(429, 'Zu viele Versuche. Bitte warte 15 Minuten.');
 
-  if (answer !== expected) {
+  const correct = code ? await hashCode(role, answer, env) === code : answer === env.MAMA_ANSWER;
+  if (!correct) {
     const fails = (row?.fails ?? 0) + 1;
     const locked = fails >= MAX_FAILS ? now() + LOCK_TIME : 0;
     await env.DB.prepare(
@@ -122,6 +144,7 @@ async function state(role, env) {
     ledger: ledger.map(publicEntry),
     vapidKey: vapidPublicKey(env.VAPID_PRIVATE_JWK),
   };
+  body.hasCode = Boolean(await readMeta(`code_${role}`, env));
   if (role === 'mama') {
     body.services = SERVICES;
     body.notices = ledger.filter((e) => e.seen === 0).reverse().map(publicEntry);
@@ -306,6 +329,41 @@ async function acknowledge(body, env) {
   }
 }
 
+/* ---------- Code und Reset ---------- */
+
+async function loginOptions(env) {
+  const [mama, arne] = await Promise.all([readMeta('code_mama', env), readMeta('code_arne', env)]);
+  return { mama: Boolean(mama), arne: Boolean(arne) };
+}
+
+async function saveCode(body, role, env) {
+  const { code } = body;
+  if (code !== null && !/^\d{4}$/.test(String(code))) throw new Fail(400, 'Der Code muss aus 4 Ziffern bestehen.');
+  const key = `code_${role}`;
+  await env.DB.batch([
+    code === null
+      ? env.DB.prepare('DELETE FROM meta WHERE key = ?').bind(key)
+      : writeMeta(key, await hashCode(role, code, env), env),
+    writeMeta(`epoch_${role}`, await epoch(role, env) + 1, env),
+    env.DB.prepare('DELETE FROM push_subs WHERE role = ?').bind(role),
+  ]);
+  return { ok: true, token: await makeToken(role, env) };
+}
+
+// Alles wie neu. Nur die Zähler bleiben und steigen, damit alte Anmeldungen ungültig werden.
+async function resetAll(env) {
+  const [mama, arne] = await Promise.all([epoch('mama', env), epoch('arne', env)]);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM ledger'),
+    env.DB.prepare('DELETE FROM orders'),
+    env.DB.prepare('DELETE FROM push_subs'),
+    env.DB.prepare('DELETE FROM login_attempts'),
+    env.DB.prepare('DELETE FROM meta'),
+    writeMeta('epoch_mama', mama + 1, env),
+    writeMeta('epoch_arne', arne + 1, env),
+  ]);
+}
+
 /* ---------- Push ---------- */
 
 async function subscribe(body, role, env, ctx) {
@@ -371,6 +429,7 @@ async function route(request, env, ctx) {
   const send = (data = { ok: true }) => json(data, request, env);
 
   if (request.method === 'POST' && pathname === '/api/login') return login(request, env);
+  if (request.method === 'GET' && pathname === '/api/auth') return send(await loginOptions(env));
 
   const role = await readRole(request, env);
   if (request.method === 'GET' && pathname === '/api/state') return send(await state(role, env));
@@ -386,6 +445,15 @@ async function route(request, env, ctx) {
   if (pathname === '/api/push/subscribe') {
     if (role === 'viewer') throw new Fail(403, 'Zuschauer bekommen keine Nachrichten.');
     await subscribe(body, role, env, ctx);
+    return send();
+  }
+  if (pathname === '/api/code') {
+    if (role === 'viewer') throw new Fail(403, 'Das dürfen nur Mama und Arne.');
+    return send(await saveCode(body, role, env));
+  }
+  if (pathname === '/api/reset') {
+    if (role === 'viewer') throw new Fail(403, 'Das dürfen nur Mama und Arne.');
+    await resetAll(env);
     return send();
   }
   if (pathname === '/api/push/unsubscribe') { await unsubscribe(body, env); return send(); }

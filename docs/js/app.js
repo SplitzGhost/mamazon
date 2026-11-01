@@ -6,7 +6,8 @@ import * as mama from './mama.js';
 import * as arne from './arne.js';
 import { viewerView } from './viewer.js';
 import { ledgerList } from './orders.js';
-import { disablePush, enablePush, isIOS, isInstalled, pushStatus, registerWorker } from './push.js';
+import { disablePush, enablePush, isIOS, isInstalled, pushStatus, registerWorker, syncPush } from './push.js';
+import { askCode } from './code.js';
 import { countTo, dialog, esc, formatTime, sheet, toast } from './ui.js';
 
 const POLL_MS = 10000;
@@ -49,11 +50,15 @@ function accountView() {
   const wallet = session.role === 'mama'
     ? `<div class="card wallet"><div><small>Dein Guthaben</small><strong>${coin(30)} ${state.balance}</strong></div><span class="quiet">${COIN}</span></div>`
     : '';
+  const codeHint = session.role === 'mama' ? 'Wird statt der Frage abgefragt' : 'Wird beim Anmelden abgefragt';
   return `<div class="large-title"><h1>Konto</h1></div>
     ${wallet}
     <div class="card list settings">
       <div id="push-row"></div>
+      <button class="list-row" data-act="code"><span class="row-icon">${icon('lock', 19)}</span><span class="list-text"><strong>${state.hasCode ? 'Code ändern' : 'Code festlegen'}</strong><time>${codeHint}</time></span>${icon('chevron', 16)}</button>
+      ${state.hasCode ? `<button class="list-row" data-act="removecode"><span class="row-icon">${icon('unlock', 19)}</span><span class="list-text"><strong>Code entfernen</strong></span>${icon('chevron', 16)}</button>` : ''}
       <button class="list-row" data-act="switch"><span class="row-icon">${icon('swap', 19)}</span><span class="list-text"><strong>Rolle wechseln</strong></span>${icon('chevron', 16)}</button>
+      <button class="list-row danger" data-act="reset"><span class="row-icon">${icon('trash', 19)}</span><span class="list-text"><strong>App zurücksetzen</strong><time>Löscht alles für alle</time></span>${icon('chevron', 16)}</button>
     </div>
     ${history}`;
 }
@@ -185,7 +190,10 @@ async function enter(animate = true) {
     return;
   }
   render(animate);
-  if (session.role !== 'viewer' && isIOS && !isInstalled) installHelp();
+  if (session.role !== 'viewer') {
+    if (isIOS && !isInstalled) installHelp();
+    syncPush().catch(() => {});
+  }
   poll();
 }
 
@@ -210,6 +218,15 @@ function installHelp() {
 }
 
 /* ---------- Aktionen ---------- */
+
+// Ein neuer Code meldet alle anderen Geräte dieser Person ab, dieses Gerät bekommt ein frisches Token.
+async function storeCode(code) {
+  const { token } = await api('/api/code', { code });
+  saveSession(session.role, token);
+  await syncPush().catch(() => {});
+  await refresh();
+  render();
+}
 
 const actions = {
   async pick({ role }) {
@@ -246,6 +263,49 @@ const actions = {
   async testpush() {
     await api('/api/push/test', {});
     toast('Testnachricht ist unterwegs.');
+  },
+  async code() {
+    const first = await askCode({ title: 'Neuer Code', text: 'Wähle 4 Ziffern.' });
+    if (first === null) return;
+    const second = await askCode({ title: 'Code wiederholen', text: 'Gib ihn zur Sicherheit noch einmal ein.' });
+    if (second === null) return;
+    if (first !== second) {
+      toast('Die Codes waren nicht gleich.', 'bad');
+      return;
+    }
+    await storeCode(first);
+    toast('Code gespeichert.');
+  },
+  async removecode() {
+    const sure = await dialog({
+      title: 'Code entfernen?',
+      text: session.role === 'mama'
+        ? 'Beim Anmelden kommt dann wieder die Frage.'
+        : 'Dann kommt jeder ohne Code in die Arne-Ansicht.',
+      buttons: [{ label: 'Abbrechen', value: false }, { label: 'Entfernen', value: true, style: 'danger' }],
+    });
+    if (!sure) return;
+    await storeCode(null);
+    toast('Code entfernt.');
+  },
+  async reset() {
+    const danger = (label) => [{ label: 'Abbrechen', value: false }, { label, value: true, style: 'danger' }];
+    const sure = await dialog({
+      title: 'App zurücksetzen?',
+      text: 'Alle MumCoins, Bestellungen, Codes und der Verlauf werden für alle gelöscht. Alle Geräte müssen sich neu anmelden.',
+      buttons: danger('Weiter'),
+    });
+    if (!sure) return;
+    const really = await dialog({
+      title: 'Wirklich alles löschen?',
+      text: 'Das lässt sich nicht rückgängig machen.',
+      buttons: danger('Alles löschen'),
+    });
+    if (!really) return;
+    await api('/api/reset', {});
+    clearSession();
+    start();
+    toast('Die App ist wie neu.');
   },
   async switch() {
     const sure = await dialog({
