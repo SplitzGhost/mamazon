@@ -14,7 +14,7 @@ Die App passt sich dem Handy an und zeigt auf iPad und Computer ein Handy auf de
 | `tools/` | Hilfsprogramme für Schlüssel und App-Symbole |
 | `test/` | Automatische Tests |
 
-Die Quiz-Antworten liegen als Geheimnisse beim Server und stehen nie in diesem Repository.
+Die Quiz-Antwort für Mama liegt als Geheimnis beim Server und steht nie in diesem Repository.
 
 ## Lokal starten
 
@@ -22,7 +22,7 @@ Die Quiz-Antworten liegen als Geheimnisse beim Server und stehen nie in diesem R
 npm install
 ```
 
-Die Antworten werden als Umgebungsvariablen `MAMA_ANSWER` und `ARNE_ANSWER` übergeben:
+Die Antwort wird als Umgebungsvariable `MAMA_ANSWER` übergeben:
 
 ```bash
 npm run secrets:local

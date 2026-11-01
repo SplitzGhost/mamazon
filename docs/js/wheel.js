@@ -84,8 +84,6 @@ const pad = (n) => String(n).padStart(2, '0');
 const range = (from, to, label = pad) =>
   Array.from({ length: to - from + 1 }, (_, i) => ({ value: from + i, label: label(from + i) }));
 
-const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-
 function picker(wheels, read, separator = '') {
   const root = document.createElement('div');
   root.className = 'picker';
@@ -105,11 +103,4 @@ export function timePicker() {
   const hour = createWheel(range(0, 23), 12, 'Stunde');
   const minute = createWheel(range(0, 59), 0, 'Minute');
   return picker([hour, minute], () => `${pad(hour.value())}:${pad(minute.value())}`, ':');
-}
-
-export function datePicker() {
-  const day = createWheel(range(1, 31), 1, 'Tag');
-  const month = createWheel(MONTHS.map((label, i) => ({ value: i + 1, label })), 1, 'Monat');
-  const year = createWheel(range(1850, new Date().getFullYear(), String), 2000, 'Jahr');
-  return picker([day, month, year], () => `${year.value()}-${pad(month.value())}-${pad(day.value())}`);
 }

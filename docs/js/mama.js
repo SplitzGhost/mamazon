@@ -2,6 +2,7 @@ import { api } from './api.js';
 import { art, coin, icon } from './art.js';
 import { COIN } from './config.js';
 import { orderCard, section, emptyState } from './orders.js';
+import { birthdayParty, coinParty } from './party.js';
 import { celebrate, dialog, esc, flyCoins, formatDate, isoDate, sheet, toast } from './ui.js';
 
 const WAITING = ['offer', 'counter', 'open', 'in_progress'];
@@ -165,14 +166,13 @@ export async function decideCounter(id, choice, refresh, source) {
 }
 
 export async function showNotice(entry) {
-  const gain = entry.amount > 0;
-  if (gain) celebrate();
+  if (entry.amount > 0) {
+    await (entry.kind === 'welcome' ? birthdayParty(entry) : coinParty(entry));
+    flyCoins(document.querySelector('.tabs'), document.querySelector('.balance'), 14);
+    return;
+  }
   await dialog({
-    className: 'notice',
-    top: `<div class="notice-coin">${coin(72)}</div>`,
-    title: gain ? `Du hast ${entry.amount} ${COIN} erhalten!` : `Arne hat ${Math.abs(entry.amount)} ${COIN} abgezogen`,
+    title: `Arne hat ${Math.abs(entry.amount)} ${COIN} abgezogen`,
     text: esc(entry.reason),
-    buttons: [{ label: gain ? 'Danke!' : 'OK', value: true, style: 'strong' }],
   });
-  if (gain) flyCoins(document.querySelector('.tabs'), document.querySelector('.balance'));
 }

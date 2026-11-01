@@ -1,7 +1,7 @@
 import { api, clearSession, saveSession, session } from './api.js';
 import { coin, icon } from './art.js';
 import { COIN } from './config.js';
-import { rolesView, askQuiz } from './login.js';
+import { rolesView, signIn } from './login.js';
 import * as mama from './mama.js';
 import * as arne from './arne.js';
 import { viewerView } from './viewer.js';
@@ -22,7 +22,9 @@ let tab = null;
 let snapshot = '';
 let timer = 0;
 let showingNotices = false;
+let shownBalance;
 const seenNotices = new Set();
+const finishedNotices = new Set();
 
 /* ---------- Aufbau ---------- */
 
@@ -109,22 +111,25 @@ function updateTabs() {
   }
 }
 
-function updateBalance(previous) {
+// Neue Coins zählen erst oben rechts, wenn Mama ihr Fenster gesehen hat.
+function updateBalance() {
   const el = document.getElementById('balance');
   if (!el) return;
-  countTo(el, previous ?? state.balance, state.balance);
-  if (previous !== undefined && previous !== state.balance) {
+  const pending = (state.notices ?? []).filter((e) => !finishedNotices.has(e.id)).reduce((sum, e) => sum + e.amount, 0);
+  const target = state.balance - pending;
+  countTo(el, shownBalance ?? target, target);
+  if (shownBalance !== undefined && shownBalance !== target) {
     const pill = el.closest('.balance');
     pill.classList.remove('bump');
     void pill.offsetWidth;
     pill.classList.add('bump');
   }
+  shownBalance = target;
 }
 
 /* ---------- Daten ---------- */
 
 async function refresh() {
-  const previous = state?.balance;
   const next = await api('/api/state');
   if (next.role !== session.role) {
     clearSession();
@@ -132,7 +137,7 @@ async function refresh() {
     return;
   }
   state = next;
-  updateBalance(previous);
+  updateBalance();
   const fingerprint = JSON.stringify([next.orders, next.ledger, next.balance]);
   const typing = document.activeElement?.closest?.('#view') && /INPUT|TEXTAREA/.test(document.activeElement.tagName);
   if (fingerprint !== snapshot && !typing) {
@@ -157,6 +162,8 @@ async function showNotices() {
     if (seenNotices.has(entry.id)) continue;
     seenNotices.add(entry.id);
     await mama.showNotice(entry);
+    finishedNotices.add(entry.id);
+    setTimeout(updateBalance, 700);
     await api('/api/ack', { ids: [entry.id] }).catch(() => {});
   }
   showingNotices = false;
@@ -169,6 +176,7 @@ async function enter(animate = true) {
   tab = TABS[session.role]?.[0][0] ?? null;
   state = null;
   snapshot = '';
+  shownBalance = undefined;
   try {
     await refresh();
   } catch (error) {
@@ -210,7 +218,7 @@ const actions = {
       await enter();
       return;
     }
-    if (await askQuiz(role)) await enter();
+    if (await signIn(role)) await enter();
     else start();
   },
   retry: () => enter(),

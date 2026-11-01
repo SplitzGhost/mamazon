@@ -31,7 +31,7 @@ test('kompletter Ablauf', { skip: !reachable && 'lokaler Server läuft nicht' },
   });
 
   const mama = (await login('mama', read('MAMA_ANSWER'))).token;
-  const arne = (await login('arne', read('ARNE_ANSWER'))).token;
+  const arne = (await login('arne')).token;
   assert.ok(mama && arne);
   const stateOf = async (token) => (await call('/api/state', { token })).data;
 
@@ -40,7 +40,7 @@ test('kompletter Ablauf', { skip: !reachable && 'lokaler Server läuft nicht' },
     const s = await stateOf(mama);
     assert.equal(s.balance, 100);
     assert.equal(s.notices.length, 1);
-    assert.equal(s.notices[0].reason, 'Alles Gute, liebe Mama!');
+    assert.equal(s.notices[0].kind, 'welcome');
     await call('/api/ack', { token: mama, body: { ids: [s.notices[0].id] } });
     assert.equal((await stateOf(mama)).notices.length, 0);
   });
@@ -144,8 +144,8 @@ test('kompletter Ablauf', { skip: !reachable && 'lokaler Server läuft nicht' },
   });
 
   await t.test('nach fünf Fehlversuchen ist Pause', async () => {
-    for (let i = 0; i < 5; i += 1) await login('arne', '2000-01-01');
-    const res = await call('/api/login', { body: { role: 'arne', answer: read('ARNE_ANSWER') } });
+    for (let i = 0; i < 5; i += 1) await login('mama', '00:00');
+    const res = await call('/api/login', { body: { role: 'mama', answer: read('MAMA_ANSWER') } });
     assert.equal(res.status, 429);
   });
 });

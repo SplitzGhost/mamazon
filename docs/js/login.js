@@ -1,20 +1,7 @@
 import { api, saveSession } from './api.js';
 import { icon, coin } from './art.js';
 import { dialog, toast } from './ui.js';
-import { timePicker, datePicker } from './wheel.js';
-
-const QUIZ = {
-  mama: {
-    title: 'Bist du wirklich Mama?',
-    text: 'Wenn du wirklich Mama bist, wüsstest du diese Antwort. Um welche Uhrzeit wurde dein erster Sohn geboren?',
-    picker: timePicker,
-  },
-  arne: {
-    title: 'Bist du wirklich Arne?',
-    text: 'Wenn du wirklich Arne bist, musst du folgende Frage beantworten: An welchem Datum wurde Hertha gegründet?',
-    picker: datePicker,
-  },
-};
+import { timePicker } from './wheel.js';
 
 export function rolesView() {
   const role = (id, iconName, name, text) => `
@@ -38,13 +25,11 @@ export function rolesView() {
     </div>`;
 }
 
-// Liefert die neue Rolle oder null, wenn das Quiz nicht bestanden wurde.
-export async function askQuiz(role) {
-  const quiz = QUIZ[role];
-  const picker = quiz.picker();
-  const answer = await dialog({
-    title: quiz.title,
-    text: quiz.text,
+function askMama() {
+  const picker = timePicker();
+  return dialog({
+    title: 'Bist du wirklich Mama?',
+    text: 'Wenn du wirklich Mama bist, wüsstest du diese Antwort. Um welche Uhrzeit wurde dein erster Sohn geboren?',
     content: picker.el,
     className: 'quiz',
     onOpen: picker.mount,
@@ -53,6 +38,11 @@ export async function askQuiz(role) {
       { label: 'Bestätigen', style: 'strong', read: () => picker.value() },
     ],
   });
+}
+
+// Liefert die neue Rolle oder null, wenn die Anmeldung nicht geklappt hat. Nur Mama bekommt eine Frage.
+export async function signIn(role) {
+  const answer = role === 'mama' ? await askMama() : '';
   if (answer === null) return null;
 
   let result;

@@ -1,0 +1,131 @@
+/* Vollbild-Show, wenn MumCoins eintreffen, und die Geburtstags-Überraschung. */
+
+.party {
+  position: absolute;
+  z-index: 10;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: calc(var(--safe-top) + 14px) 24px calc(var(--safe-bottom) + 18px);
+  color: #fff;
+  text-align: center;
+  background: radial-gradient(90% 62% at 50% 34%, #ff77a8, #ff2d78 52%, #cf0f58);
+  opacity: 0;
+  transition: opacity .32s, transform .42s var(--ease);
+}
+.party.shown { opacity: 1; }
+.party.leaving { opacity: 0; transform: scale(1.08); }
+.party.birthday { background: radial-gradient(100% 70% at 50% 30%, #e0226c, #8d0d4b 52%, #3f0726); }
+.party canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.party-rays {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  width: 210vmax;
+  height: 210vmax;
+  margin: -105vmax 0 0 -105vmax;
+  background: repeating-conic-gradient(rgba(255, 255, 255, .13) 0 9deg, transparent 9deg 22deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000, transparent 46%);
+  mask-image: radial-gradient(closest-side, #000, transparent 46%);
+  animation: turn 26s linear infinite;
+}
+@keyframes turn { to { transform: rotate(360deg); } }
+
+.party-flash { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.party.opened .party-flash { animation: flash .75s ease-out; }
+@keyframes flash { from { opacity: .95; } }
+
+.party-stage { position: relative; display: grid; justify-items: center; width: 100%; max-width: 340px; }
+
+/* Münze */
+
+.party-coin { position: relative; display: grid; place-items: center; perspective: 700px; animation: coin-in 1.15s var(--spring) both, coin-float 3.4s ease-in-out 1.2s infinite; }
+.party-coin .coin { position: relative; filter: drop-shadow(0 0 26px rgba(255, 255, 255, .85)) drop-shadow(0 16px 26px rgba(90, 0, 40, .4)); animation: coin-spin 1.2s var(--ease) both; }
+.party-coin i { position: absolute; width: 138px; height: 138px; border: 3px solid rgba(255, 255, 255, .85); border-radius: 50%; opacity: 0; animation: ring 1.8s ease-out .35s infinite; }
+.party-coin i:nth-child(2) { animation-delay: .95s; }
+.party-coin i:nth-child(3) { animation-delay: 1.55s; }
+@keyframes coin-in { from { transform: translateY(-340px) scale(.35); } }
+@keyframes coin-spin { from { transform: rotateY(-1080deg); } }
+@keyframes coin-float { 50% { transform: translateY(-9px); } }
+@keyframes ring { from { opacity: .9; transform: scale(.82); } to { opacity: 0; transform: scale(2.3); } }
+
+.party-amount {
+  margin-top: 18px;
+  font-size: 72px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -2.5px;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px rgba(255, 255, 255, .65), 0 6px 18px rgba(90, 0, 40, .35);
+  animation: pop .7s var(--spring) .3s both;
+}
+.party-unit { margin-top: 2px; font-size: 20px; font-weight: 750; opacity: .95; animation: pop .6s var(--spring) .42s both; }
+.party-reason { margin-top: 14px; max-width: 300px; font-size: 18px; line-height: 1.34; font-weight: 550; overflow-wrap: anywhere; animation: rise .6s var(--ease) .62s both; }
+@keyframes pop { from { opacity: 0; transform: scale(.4); } }
+
+/* Knopf */
+
+.party-btn {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 54px;
+  margin-top: 26px;
+  border-radius: 27px;
+  background: #fff;
+  color: var(--pink-deep);
+  font-size: 17px;
+  font-weight: 750;
+  box-shadow: 0 12px 28px rgba(70, 0, 30, .32), inset 0 -2px 0 rgba(255, 45, 120, .12);
+  animation: rise .6s var(--ease) .85s both;
+  transition: transform .3s var(--spring);
+}
+.party-btn:active { transform: scale(.95); }
+.party-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -45%;
+  width: 34%;
+  background: linear-gradient(100deg, transparent, rgba(255, 143, 183, .55), transparent);
+  transform: skewX(-18deg);
+  animation: shine 2.6s ease-in-out 1.4s infinite;
+}
+@keyframes shine { 55%, 100% { left: 125%; } }
+
+/* Geschenk */
+
+.party-kicker { font-size: 25px; line-height: 1.2; font-weight: 800; letter-spacing: -.4px; animation: rise .7s var(--ease) both; }
+.party-hint { margin-top: 12px; font-size: 16px; font-weight: 600; opacity: .9; animation: breathe 1.7s ease-in-out infinite; }
+@keyframes breathe { 50% { opacity: .45; } }
+
+.gift { display: block; width: 238px; margin-top: 22px; animation: pop .8s var(--spring) .15s both; }
+.gift-art { display: block; width: 100%; overflow: visible; filter: drop-shadow(0 20px 28px rgba(30, 0, 15, .5)); animation: gift-wiggle 1.5s ease-in-out .9s infinite; }
+.gift-lid, .gift-box { transform-origin: 100px 100px; transition: transform .52s var(--ease), opacity .52s; }
+@keyframes gift-wiggle {
+  0%, 62%, 100% { transform: none; }
+  68% { transform: rotate(-5deg) scale(1.03); }
+  76% { transform: rotate(5deg) scale(1.03); }
+  84% { transform: rotate(-3deg); }
+  92% { transform: rotate(3deg); }
+}
+.party.opening .gift-art { animation: gift-rattle .1s linear 5; }
+@keyframes gift-rattle { 50% { transform: translateX(-4px) rotate(-2deg); } }
+.party.opening .gift-lid { transform: translate(34px, -220px) rotate(38deg); opacity: 0; }
+.party.opening .gift-box { transform: scale(1.5); opacity: 0; }
+.party.opening .party-hint, .party.opening .party-kicker { opacity: 0; transition: opacity .2s; }
+
+/* Geburtstagstext */
+
+.party-title { font-size: 33px; line-height: 1.14; font-weight: 900; letter-spacing: -.8px; text-shadow: 0 0 22px rgba(255, 143, 183, .9), 0 4px 14px rgba(30, 0, 15, .5); }
+.party-title + .party-coin { margin-top: 18px; }
+.birthday .party-coin .coin { width: 104px; height: 104px; }
+.birthday .party-coin i { width: 104px; height: 104px; }
+.birthday .party-amount { margin-top: 12px; font-size: 60px; }
+.word { display: inline-block; white-space: nowrap; }
+.letter { display: inline-block; animation: letter-in .62s var(--spring) calc(var(--i) * 26ms) both, letter-wave 2.3s ease-in-out calc(1.1s + var(--i) * 70ms) infinite; }
+@keyframes letter-in { from { opacity: 0; transform: translateY(32px) scale(.3) rotate(-14deg); } }
+@keyframes letter-wave { 12% { transform: translateY(-8px); color: #ffd3e3; } 24% { transform: none; color: #fff; } }

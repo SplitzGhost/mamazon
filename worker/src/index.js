@@ -5,6 +5,7 @@ const TOKEN_LIFETIME = 2 * 365 * 24 * 3600 * 1000;
 const MAX_FAILS = 5;
 const LOCK_TIME = 15 * 60 * 1000;
 const WELCOME_COINS = 100;
+const WELCOME_TEXT = 'Alles Gute zum Geburtstag, liebe Mama!';
 const COIN = 'MumCoins';
 
 class Fail extends Error {
@@ -50,8 +51,9 @@ function need(role, wanted) {
 
 async function login(request, env) {
   const { role, answer } = await request.json();
-  const expected = { mama: env.MAMA_ANSWER, arne: env.ARNE_ANSWER }[role];
-  if (!expected) throw new Fail(400, 'Unbekannte Rolle.');
+  if (role === 'arne') return json({ ok: true, role, token: await makeToken(role, env) }, request, env);
+  if (role !== 'mama') throw new Fail(400, 'Unbekannte Rolle.');
+  const expected = env.MAMA_ANSWER;
 
   const key = `${role}:${request.headers.get('CF-Connecting-IP') ?? 'local'}`;
   const row = await env.DB.prepare('SELECT fails, locked_until FROM login_attempts WHERE key = ?').bind(key).first();
@@ -76,7 +78,7 @@ async function welcomeMama(env) {
   const first = await env.DB.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('welcomed', '1')").run();
   if (!first.meta.changes) return;
   await env.DB.prepare('INSERT INTO ledger (id, amount, kind, reason, seen, created_at) VALUES (?, ?, ?, ?, 0, ?)')
-    .bind(uid(), WELCOME_COINS, 'welcome', 'Alles Gute, liebe Mama!', now()).run();
+    .bind(uid(), WELCOME_COINS, 'welcome', WELCOME_TEXT, now()).run();
 }
 
 /* ---------- Lesen ---------- */
@@ -316,7 +318,7 @@ async function subscribe(body, role, env, ctx) {
   // Beim ersten Login gibt es noch kein Gerät für Push, darum kommt die Nachricht hier hinterher.
   if (role === 'mama') {
     const first = await env.DB.prepare("INSERT OR IGNORE INTO meta (key, value) VALUES ('welcome_pushed', '1')").run();
-    if (first.meta.changes) notify(env, ctx, 'mama', 'Alles Gute, liebe Mama!', `Als Belohnung bekommst du ${WELCOME_COINS} ${COIN}.`);
+    if (first.meta.changes) notify(env, ctx, 'mama', WELCOME_TEXT, `Als Belohnung bekommst du ${WELCOME_COINS} ${COIN}.`);
   }
 }
 
