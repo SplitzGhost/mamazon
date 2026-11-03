@@ -71,3 +71,12 @@ npm run secrets:live
 ```
 
 Die Adresse des Servers kommt in `docs/js/config.js`.
+
+### Automatisch veröffentlichen
+
+Nach der ersten Einrichtung bringt GitHub den Server bei jeder Änderung an `worker/` auf `main` selbst zu Cloudflare (`.github/workflows/deploy-worker.yml`). Dafür braucht das Repository unter *Settings → Secrets and variables → Actions* zwei Secrets:
+
+- `CLOUDFLARE_API_TOKEN`: in Cloudflare unter *My Profile → API Tokens → Create Token* mit der Vorlage „Edit Cloudflare Workers“ erstellen
+- `CLOUDFLARE_ACCOUNT_ID`: steht im Cloudflare-Dashboard unter *Workers & Pages* rechts in der Seitenleiste
+
+Von Hand starten lässt sich das Veröffentlichen unter *Actions → Server veröffentlichen → Run workflow*.
